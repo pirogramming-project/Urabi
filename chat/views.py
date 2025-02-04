@@ -14,6 +14,12 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+def jwt_api_test(request):
+    """
+    API 테스트용 HTML 파일(api_test.html)을 렌더링하는 뷰입니다.
+    """
+    return render(request, 'chat/apitest.html')
+
 # 채팅방 목록 페이지네이션 설정
 class ChatRoomPagination(PageNumberPagination):
     page_size = 20 # 한 페이지당 표시할 채팅방 수
@@ -41,7 +47,7 @@ class ChatRoomList(generics.ListCreateAPIView):
         if not User.objects.filter(id=user2_id).exists():
             return Response({'error': '상대방 사용자가 존재하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        travel = get_object_or_404(TravelGroup, id=travel_id)
+        travel = get_object_or_404(TravelGroup, travel_id=travel_id)
         if not travel.participants.filter(id__in=[user1_id, user2_id]).count() == 2:
             return Response({'error': '두 사용자 모두 해당 여행에 참여하고 있어야 합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -106,6 +112,12 @@ def chat_rooms(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def enter_chat_room(request, room_id):
+    """
+    채팅방 입장 API
+    - 현재 요청한 사용자가 채팅방에 참여 중인지 확인하고,
+    - 읽지 않은 메시지를 읽음 처리하고,
+    - WebSocket 연결 URL(토큰 포함) 등 채팅방 상세 정보를 반환합니다.
+    """
     chat_room = get_object_or_404(ChatRoom, id=room_id)
     user = request.user
 
@@ -119,19 +131,27 @@ def enter_chat_room(request, room_id):
     for msg in messages:
         msg.read_by.add(request.user)
     
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+
+     # TravelGroup 기본키는 'travel_id'로 처리 (기존의 'id'가 아님)
+    travel_info = {
+        'id': chat_room.travel.travel_id,  
+        'title': chat_room.travel.title,
+        'start_date': chat_room.travel.start_date,
+        'end_date': chat_room.travel.end_date,
+    }
+    
     # 채팅방 정보 응답
     response_data = {
         'room_id': chat_room.id,
         'room_name': f"{chat_room.user1.nickname} - {chat_room.user2.nickname}",
         'other_user_nickname': other_user.nickname,
         'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
-        'travel_info': {
-            'id': chat_room.travel.id,
-            'title': chat_room.travel.title,
-            'start_date': chat_room.travel.start_date,
-            'end_date': chat_room.travel.end_date,
-        },
-        'websocket_url': f"wss://{request.get_host()}/ws/chat/{chat_room.id}/?token={request.auth}"
+        'travel_info': travel_info,
+        'websocket_url': f"wss://{request.get_host()}/ws/chat/{chat_room.id}/?token={token}"
     }
 
     return Response(response_data, status=status.HTTP_200_OK)
@@ -212,11 +232,13 @@ def mark_as_read(request, message_id):
 def chat_room_user1(request, room_id):
     room = get_object_or_404(ChatRoom, id=room_id)
     other_user = room.user2 if request.user == room.user1 else room.user1
+
+    
     
     context = {
         'room_id': room_id,
         'room_name': str(room),
-        'access_token': str(request.auth),  # JWT 토큰을 문자열로 변환
+        'access_token': str(getattr(request, 'auth', '')),  # JWT 토큰을 문자열로 변환
         'other_user_nickname': other_user.nickname,
         'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
         'travel_info': {
@@ -238,7 +260,7 @@ def chat_room_user2(request, room_id):
     context = {
         'room_id': room_id,
         'room_name': str(room),
-        'access_token': str(request.auth),  # JWT 토큰을 문자열로 변환
+        'access_token': str(getattr(request, 'auth', '')),  # JWT 토큰을 문자열로 변환
         'other_user_nickname': other_user.nickname,
         'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
         'travel_info': {
@@ -249,3 +271,10 @@ def chat_room_user2(request, room_id):
         'websocket_url': f"wss://{request.get_host()}/ws/chat/{room_id}/"
     }
     return render(request, 'chat/room_user2.html', context)
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def some_protected_route(request):
+    return Response({'message': 'This is a protected route!'}, status=status.HTTP_200_OK)

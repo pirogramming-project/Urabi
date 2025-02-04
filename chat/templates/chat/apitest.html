@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>JWT API Test</title>
+</head>
+<body>
+    <h1>JWT API Test</h1>
+    <button id="testBtn">Test Chat Room 1</button>
+    <pre id="result"></pre>
+    
+    <script>
+        // 토큰이 없다면 login 으로 redirect
+        function checkToken(){
+            const token = localStorage.getItem('jwt_token');
+            if (!token){
+                alert("로그인이 필요합니다.");
+                window.location.href = "{% url 'users:login' %}";
+            }
+            return token;
+        }
+
+        document.getElementById('testBtn').addEventListener('click', function() {
+            const token = checkToken();
+            fetch("http://127.0.0.1:8000/chat/rooms/1/", {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + token, // 헤더에 토큰 추가
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("HTTP error " + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                console.log("API 응답:", data);
+            })
+            .catch(error => {
+                document.getElementById('result').textContent = "Error: " + error;
+                console.error("API 요청 에러:", error);
+            });
+        });
+    </script>
+</body>
+</html>

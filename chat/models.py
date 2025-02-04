@@ -35,7 +35,7 @@ class ChatRoom(models.Model):
         self.save()
     
     @property
-    @cache_page(60*5)
+    @cache_page(60*500)
     def get_last_message(self):
         """
         채팅방의 마지막 메시지를 반환하며, 5분 동안 캐싱함.

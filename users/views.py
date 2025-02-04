@@ -15,6 +15,14 @@ from .serializers import SignupSerializer, UserSerializer, LoginSerializer
 from django.contrib.auth.decorators import login_required
 from .forms import UserUpdateForm
 from django.core.files.base import ContentFile
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def get_csrf_token(request):
+    return JsonResponse({"csrfToken": get_token(request)})
 
 
 def social_login(request):
@@ -193,6 +201,8 @@ class LoginView(generics.GenericAPIView):
             user = authenticate(email=email, password=password)
 
             if user:
+                login(request, user)
+                request.session.save()
                 refresh = RefreshToken.for_user(user)
                 return Response({
                     "token": str(refresh.access_token),
@@ -210,11 +220,13 @@ class LoginView(generics.GenericAPIView):
             
             if user:
                 login(request, user)
+                request.session.save()
                 return redirect('main:home')
             return render(request, 'login/login.html', {'error': '로그인 실패'})
 
     def get(self, request):
         return render(request, 'login/login.html')
+
 
 def signup_view(request):
     if request.method == 'POST':
@@ -296,14 +308,33 @@ def user_logout(request):
     return redirect('main:home')
 
 def login_view(request):
-    return render(request, 'main/main.html', {'user': request.user})
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
 
+        user = authenticate(request, email=email, password=password)
+        if user is not None:
+            # 세션에 로그인 처리 (Django의 세션 인증)
+            login(request, user)
+
+            # JWT 토큰 발급 (API용)
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
+            # 여기서 세션 쿠키가 설정되었으므로, 일반 페이지에서는 user가 인증된 상태로 나타납니다.
+            # API 요청 시 클라이언트는 발급된 JWT 토큰을 사용하면 됩니다.
+            return redirect('main:home')
+        else:
+            return render(request, 'login/login.html', {'error': '로그인 실패'})
+    return render(request, 'login/login.html')
 
 
 # 마이페이지 설정
 @login_required
 def my_page(request):
     return render(request, 'mypage/myPage.html', {'user':request.user})
+
+
 
 # 정보 수정
 @login_required
@@ -335,3 +366,11 @@ def edit_profile(request):
         form = UserUpdateForm(instance=request.user)
 
     return render(request, 'mypage/editProfile.html', {'form': form, 'user': request.user})
+
+# 채팅 : 토큰 발급
+@login_required
+def get_token_for_logged_in_user(request):
+    refresh = RefreshToken.for_user(request.user)
+    return JsonResponse({
+        "access": str(refresh.access_token)
+    })

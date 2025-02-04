@@ -42,6 +42,24 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatRoom
         fields = ['id', 'user1', 'user2', 'travel', 'created_at']
+    
+    def create(self, validated_data):
+        # request를 context에서 가져옴 (view에서 serializer를 생성할 때 context={'request': request} 전달되어야 함)
+        request = self.context.get('request')
+        if request is None:
+            raise serializers.ValidationError("Request context is required.")
+        
+        # 자동으로 user1은 요청한 사용자로 설정
+        validated_data['user1'] = request.user
+
+        # read_only 필드이므로, 입력 데이터는 self.initial_data 에 
+        # (모델에서 외래키 필드 이름이 user2, travel이라면 그대로 사용)
+        if 'user2' in self.initial_data:
+            validated_data['user2_id'] = self.initial_data['user2']
+        if 'travel' in self.initial_data:
+            validated_data['travel_id'] = self.initial_data['travel']
+
+        return super().create(validated_data)
 
 class ChatRoomInfoSerializer(serializers.Serializer):
     """

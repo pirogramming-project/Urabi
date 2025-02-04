@@ -52,6 +52,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
+    "daphne",
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -69,7 +72,6 @@ INSTALLED_APPS = [
     'accommodation',
     'market',
     'chatbot',
-    'channels',
 ]
 
 MIDDLEWARE = [
@@ -175,12 +177,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    
 }
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"  # DB 기반 세션
 SESSION_COOKIE_AGE = 3600  # 세션 유지 시간 (1시간)
 SESSION_SAVE_EVERY_REQUEST = True  # 매 요청마다 세션 갱신
+
+#임의수정
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = False  # JavaScript에서 CSRF 토큰을 읽을 수 있도록 False
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# CORS 설정 추가 (필요 시)
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # 보안상 특정 Origin만 허용하는 것이 좋음
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000"
+]
+
 
 
 MEDIA_URL = '/media/'
@@ -188,16 +207,31 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        'BACKEND': 'chat.redis_layer.CustomRedisChannelLayer',
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],
         },
     },
 }
 
-# CORS 설정 (필요한 경우)
-CORS_ALLOW_ALL_ORIGINS = True  # 개발 환경에서만 사용, 프로덕션에서는 특정 도메인만 허용하도록 변경 필요
-CORS_ALLOW_CREDENTIALS = True
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",  # DEBUG → INFO
+        },
+    },
+}
+
+
 
 # 웹소켓 URL 설정
 WEBSOCKET_URL = '/ws/'

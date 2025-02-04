@@ -2,6 +2,8 @@ from django.urls import path, include
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import get_csrf_token
+from .views import get_token_for_logged_in_user
 
 app_name = 'users'
 
@@ -17,6 +19,8 @@ urlpatterns = [
 
     path('mypage/', views.my_page, name='my_page'),
     path('mypage/edit', views.edit_profile, name='edit_profile'),
+    path("csrf/", views.get_csrf_token, name="get_csrf_token"),
+    path('api/get_token/', views.get_token_for_logged_in_user, name='get_token'),
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
