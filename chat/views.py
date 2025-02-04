@@ -23,6 +23,25 @@ def jwt_api_test(request):
     """
     return render(request, 'chat/apitest.html')
 
+@api_view(['GET'])
+def user1room(request, room_id):
+    context = {
+        'room_id': room_id,
+        'room_name': f'Room {room_id}',
+        'access_token': request.auth.get_token() if request.auth else None,
+    }
+    return render(request, 'chat/room_user1.html', context)
+
+@api_view(['GET'])
+def user2room(request, room_id):
+    context = {
+        'room_id': room_id,
+        'room_name': f'Room {room_id}',
+        'access_token': request.auth.get_token() if request.auth else None,
+    }
+    return render(request, 'chat/room_user2.html', context)
+
+
 # 채팅방 목록 페이지네이션 설정
 class ChatRoomPagination(PageNumberPagination):
     page_size = 20 # 한 페이지당 표시할 채팅방 수
@@ -43,9 +62,9 @@ class ChatRoomList(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         # 새로운 채팅방 생성 로직
-        user1_id = request.user.id
+        user1_id = request.data.get('user1')
         user2_id = request.data.get('user2')
-        travel_id = request.data.get('travel')
+        travel_id = request.data.get('travel') 
         
         # 상대방 사용자 존재 여부 확인
         if not User.objects.filter(id=user2_id).exists():
@@ -140,7 +159,7 @@ def enter_chat_room(request, room_id):
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
 
-     # TravelGroup 기본키는 'travel_id'로 처리 (기존의 'id'가 아님)
+    # TravelGroup 기본키는 'travel_id'로 처리 (기존의 'id'가 아님)
     travel_info = {
         'id': chat_room.travel.travel_id,  
         'title': chat_room.travel.title,
@@ -155,7 +174,7 @@ def enter_chat_room(request, room_id):
         'other_user_nickname': other_user.nickname,
         'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
         'travel_info': travel_info,
-        'websocket_url': f"wss://{request.get_host()}/ws/chat/{chat_room.id}/?token={token}"
+        'websocket_url': f"ws://{request.get_host()}/ws/chat/{chat_room.id}/?token={request.auth.token}"
     }
 
     return Response(response_data, status=status.HTTP_200_OK)
@@ -232,8 +251,8 @@ def mark_as_read(request, message_id):
 
 
 # 사용자1 채팅방 렌더링 (테스트용)
-@login_required
-def chat_room_user1(request, room_id):
+#@login_required
+#def chat_room_user1(request, room_id):
     # 채팅방이 없으면 자동으로 생성
     room, created = ChatRoom.objects.get_or_create(
         id=room_id,
@@ -254,8 +273,8 @@ def chat_room_user1(request, room_id):
     }
     return render(request, 'chat/room_user1.html', context)
 
-@login_required
-def chat_room_user2(request, room_id):
+#@login_required
+#def chat_room_user2(request, room_id):
     try:
         room = ChatRoom.objects.get(id=room_id)
         # user2가 비어있으면 현재 로그인한 사용자를 user2로 설정

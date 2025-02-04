@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
+from datetime import timedelta
 
 
 
@@ -201,6 +202,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000"
 ]
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
+		# access token의 유효시간을 설정합니다.
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=40),
+		# refresh token의 유효시간을 설정합니다.
+    'ROTATE_REFRESH_TOKENS': False,
+		# True로 설정하면 리프레시 토큰이 사용될 때마다 새로운 리프레시 토큰이 발급됩니다.
+}
+
+
 
 
 MEDIA_URL = '/media/'
@@ -208,7 +219,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer", 
+        "BACKEND": 'chat.redis_layer.CustomRedisChannelLayer', 
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],
         },

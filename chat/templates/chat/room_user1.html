@@ -13,14 +13,11 @@
     <script>
         // Django 템플릿에서 전달된 room_id와 access_token 값을 가져옴
         const roomId = "{{ room_id }}";  // 채팅방 ID
-        const accessToken = "{{ access_token }}";  // 사용자 인증을 위한 액세스 토큰
+        const accessToken = encodeURIComponent("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzM4Njc4NTk3LCJpYXQiOjE3Mzg2NzgyOTcsImp0aSI6ImQ2YTY3ZDhjNjFjZTQwOGM4YzMzNGVkODFmZjUwMDQ2IiwidXNlcl9pZCI6M30.qc4x26IXF2-Yhx01u9XLapjiM9dpl92eBw3Ga00U6Oo"); // 사용자 인증을 위한 액세스 토큰  (test5@naver.com) => daphne 서버 
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const wsUrl = wsProtocol + window.location.host + '/ws/chat/' + roomId + '/?token=' + encodeURIComponent(accessToken);
-        console.log("WebSocket URL:", wsUrl);
-
-        // WebSocket 연결을 생성하여 채팅 서버와 연결
-        const chatSocket = new WebSocket(wsUrl);
+        const chatSocket = new WebSocket(
+            'ws://' + window.location.host + '/ws/chat/' + roomId + '/?token=' + accessToken  // 해당부분 배포하면 wss로 바꿔야함
+        );
         
         // 서버에서 메시지를 받을 때 이벤트 핸들러 실행 
         chatSocket.onmessage = function(e) {

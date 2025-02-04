@@ -13,7 +13,7 @@
     <script>
         // Django 템플릿에서 전달된 room_id와 access_token 값을 가져옴
         const roomId = "{{ room_id }}";  // 채팅방 ID
-        const accessToken = "{{ access_token }}";  // 사용자 인증을 위한 액세스 토큰
+        const accessToken = encodeURIComponent("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxMjk3MTAwLCJpYXQiOjE3Mzg3MDUxMDAsImp0aSI6IjI5MWM1NDI2ZjgxNzQyYmE4ZDM2NWIwMzhjYjYzMzBjIiwidXNlcl9pZCI6Nn0.0uKmmT2sntyiSwIZ9v4Q8K3-_GXzpowu2lzt2lmnusE"); // 사용자 인증을 위한 액세스 토큰  (test6@naver.com)  daphne 서버 
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const wsUrl = wsProtocol + window.location.host + '/ws/chat/' + roomId + '/?token=' + encodeURIComponent(accessToken);

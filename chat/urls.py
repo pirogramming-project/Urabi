@@ -14,8 +14,8 @@ urlpatterns = [
     path('messages/<int:message_id>/read/', views.mark_as_read, name='mark_message_as_read'), # 메시지 읽음 표시
     
     # test url 
-    path('room1/<int:room_id>/', views.chat_room_user1, name='chat_room_user1'),  # 사용자 1용 채팅방 페이지 렌더링 (테스트용)
-    path('room2/<int:room_id>/', views.chat_room_user2, name='chat_room_user2'),  # 사용자 2용 채팅방 페이지 렌더링 (테스트용)
+    path('room1/<int:room_id>/', views.user1room, name='user1room'),  # 사용자 1용 채팅방 페이지 렌더링 (테스트용)
+    path('room2/<int:room_id>/', views.user2room, name='user2room'),  # 사용자 2용 채팅방 페이지 렌더링 (테스트용)
     path('some-protected-route/', views.some_protected_route, name='some_protected_route'),
     
 ]
