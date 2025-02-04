@@ -52,8 +52,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'channels',
     "daphne",
+    'channels',
+    
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -207,7 +208,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CHANNEL_LAYERS = {
     "default": {
-        'BACKEND': 'chat.redis_layer.CustomRedisChannelLayer',
+        "BACKEND": "channels_redis.core.RedisChannelLayer", 
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],
         },
