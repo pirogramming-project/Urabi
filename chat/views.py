@@ -16,6 +16,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import HttpResponse
+from accompany.models import TravelGroup, TravelParticipants
 
 def jwt_api_test(request):
     """
@@ -61,20 +62,31 @@ class ChatRoomList(generics.ListCreateAPIView):
         return ChatRoom.objects.filter(Q(user1=user) | Q(user2=user)).order_by('-last_message_time')
 
     def create(self, request, *args, **kwargs):
-        # 새로운 채팅방 생성 로직
+    # 새로운 채팅방 생성 로직
         user1_id = request.data.get('user1')
         user2_id = request.data.get('user2')
-        travel_id = request.data.get('travel') 
-        
-        # 상대방 사용자 존재 여부 확인
+        travel_id = request.data.get('travel')
+    
+    # 상대방 사용자 존재 여부 확인
         if not User.objects.filter(id=user2_id).exists():
             return Response({'error': '상대방 사용자가 존재하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+    
+    # 여행 그룹 조회
         travel = get_object_or_404(TravelGroup, travel_id=travel_id)
-        if not travel.participants.filter(id__in=[user1_id, user2_id]).count() == 2:
-            return Response({'error': '두 사용자 모두 해당 여행에 참여하고 있어야 합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # TravelParticipants 테이블에서 해당 여행의 참여자 확인
+        user1_participant = TravelParticipants.objects.filter(travel=travel, user_id=user1_id).exists()
+        user2_participant = TravelParticipants.objects.filter(travel=travel, user_id=user2_id).exists()
+    
+    # 두 사용자 모두 여행 참여자인지 확인
+        if not (user1_participant and user2_participant):
+            return Response({
+                'error': '두 사용자 모두 해당 여행에 참여하고 있어야 합니다.',
+                'user1_participating': user1_participant,
+                'user2_participating': user2_participant
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 이미 존재하는 채팅방 확인
+    # 이미 존재하는 채팅방 확인
         existing_room = ChatRoom.objects.filter(
             (Q(user1_id=user1_id, user2_id=user2_id) | Q(user1_id=user2_id, user2_id=user1_id)),
             travel_id=travel_id
@@ -84,7 +96,7 @@ class ChatRoomList(generics.ListCreateAPIView):
             serializer = self.get_serializer(existing_room)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # 새 채팅방 생성
+    # 새 채팅방 생성
         serializer = self.get_serializer(data={
             'user1': user1_id,
             'user2': user2_id,
@@ -94,7 +106,6 @@ class ChatRoomList(generics.ListCreateAPIView):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
 
 # 채팅방 목록 조회 API
 @api_view(['GET'])
