@@ -13,6 +13,9 @@ from accompany.models import TravelGroup
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.http import HttpResponse
 
 def jwt_api_test(request):
     """
@@ -27,6 +30,7 @@ class ChatRoomPagination(PageNumberPagination):
     max_page_size = 100
 
 # 채팅방 목록 조회 및 생성 API 뷰
+@method_decorator(csrf_exempt, name='dispatch')
 class ChatRoomList(generics.ListCreateAPIView):
     serializer_class = ChatRoomSerializer
     permission_classes = [IsAuthenticated]
@@ -230,48 +234,45 @@ def mark_as_read(request, message_id):
 # 사용자1 채팅방 렌더링 (테스트용)
 @login_required
 def chat_room_user1(request, room_id):
-    room = get_object_or_404(ChatRoom, id=room_id)
-    other_user = room.user2 if request.user == room.user1 else room.user1
-
+    # 채팅방이 없으면 자동으로 생성
+    room, created = ChatRoom.objects.get_or_create(
+        id=room_id,
+        defaults={
+            'user1': request.user,
+            'user2': request.user, 
+            'travel_id': 1  # 테스트용 기본값
+        }
+    )
     
+    if created:
+        print(f"새로운 채팅방 생성됨: {room.id}")
     
     context = {
         'room_id': room_id,
-        'room_name': str(room),
-        'access_token': str(getattr(request, 'auth', '')),  # JWT 토큰을 문자열로 변환
-        'other_user_nickname': other_user.nickname,
-        'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
-        'travel_info': {
-            'title': room.travel.title,
-            'start_date': room.travel.start_date,
-            'end_date': room.travel.end_date,
-        },
-        'websocket_url': f"wss://{request.get_host()}/ws/chat/{room_id}/"
+        'room_name': f"Chat Room {room_id}",
+        'access_token': request.session.get('access_token', '')
     }
     return render(request, 'chat/room_user1.html', context)
 
-
-# 사용자2 채팅방 렌더링 (테스트용)
 @login_required
 def chat_room_user2(request, room_id):
-    room = get_object_or_404(ChatRoom, id=room_id)
-    other_user = room.user1 if request.user == room.user2 else room.user2
+    try:
+        room = ChatRoom.objects.get(id=room_id)
+        # user2가 비어있으면 현재 로그인한 사용자를 user2로 설정
+        room.user2 = request.user
+        room.save()
+        if not room.user2:
+            room.user2 = request.user
+            room.save()
+    except ChatRoom.DoesNotExist:
+        return HttpResponse("채팅방이 존재하지 않습니다.", status=404)
     
     context = {
         'room_id': room_id,
-        'room_name': str(room),
-        'access_token': str(getattr(request, 'auth', '')),  # JWT 토큰을 문자열로 변환
-        'other_user_nickname': other_user.nickname,
-        'other_user_profile_image': request.build_absolute_uri(other_user.profile_image.url) if other_user.profile_image else None,
-        'travel_info': {
-            'title': room.travel.title,
-            'start_date': room.travel.start_date,
-            'end_date': room.travel.end_date,
-        },
-        'websocket_url': f"wss://{request.get_host()}/ws/chat/{room_id}/"
+        'room_name': f"Chat Room {room_id}",
+        'access_token': request.session.get('access_token', '')
     }
     return render(request, 'chat/room_user2.html', context)
-
 
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
