@@ -76,6 +76,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "timestamp": msg.timestamp.isoformat(),
             }
             logger.debug(f"Broadcast event: {event}")
+            logger.debug(f"Adding client to group: {self.room_group_name}")
             await self.channel_layer.group_send(self.room_group_name, event)
 
     async def chat_message(self, event):
